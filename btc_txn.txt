@@ -25,11 +25,8 @@ network_byte := 0x00 # (main net)
       TODO: Confirm max size of coinbase.
     - txout1 (like IP transaction):
       - value := ~50 BTC
-      - scriptPubKey := sign(txin? + amount?, Ak1_priv) + OP_CHECKSIG
-        TODO: Confirm question marks above.
+      - scriptPubKey := Ak1_pub + OP_CHECKSIG
         TODO: Confirm max size of scriptPubKey
-      TODO: how can dst_addr be calculated in blockexplorer without knowing
-            Ak1_pub?
 
 == standard transaction ==
   Bob wants 23 BTC from Alice. Bob creates an ECDSA keypair:
