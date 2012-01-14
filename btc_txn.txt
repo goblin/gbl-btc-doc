@@ -1,0 +1,72 @@
+This is an attempt at documenting some of the Bitcoin's internals (addresses,
+keys, and most importantly transactions) in plain, easy to understand 
+pseudocode. '+' usually denotes concatenation. This is NOT an attempt on
+explaining how Script works, as this has been covered extensively elsewhere.
+It's more about what to give to Script and how to interpret its results.
+
+k_priv := rand(32 bytes) # (not all of 256bit range is valid - see secp256k1)
+length(k_priv) == 32
+
+k_pub := 0x04 + 32 bytes X coord + 32 bytes Y coord
+k_pub := some_function(k_priv)
+length(k_pub) == 65
+
+network_byte := 0x00 # (main net)
+
+== generation transaction ==
+  Alice generates an ECDSA keypair:
+    Ak1_priv + Ak1_pub.
+  Alice generates 50 BTC by creating a block with a generation 
+  transaction Ag1:
+    - txin1: 
+      - no previous output
+      - coinbase instead of scriptSig. Coinbase is usually:
+        compact target + extraNonce
+      TODO: Confirm max size of coinbase.
+    - txout1 (like IP transaction):
+      - value := ~50 BTC
+      - scriptPubKey := sign(txin? + amount?, Ak1_priv) + OP_CHECKSIG
+        TODO: Confirm question marks above.
+        TODO: Confirm max size of scriptPubKey
+      TODO: how can dst_addr be calculated in blockexplorer without knowing
+            Ak1_pub?
+
+== standard transaction ==
+  Bob wants 23 BTC from Alice. Bob creates an ECDSA keypair:
+    Bk1_priv + Bk1_pub.
+  Bob gives Alice his v1 address Ba1:
+    Ba1_rh := network_byte + ripemd160(sha256(Bk1_pub))
+    Ba1_cs := substr(sha256(sha256(Ba1_rh)), first 4 bytes)
+    Ba1 := base58check_enc(Ba1_rh + Ba1_cs)
+  Bob asks Alice to pay him 23 BTC.
+  Alice generates a new ECDSA keypair for change, Ak2_priv + Ak2_pub.
+  Alice broadcasts transaction At1:
+    - txin1: 
+      - prev_tx := some_hash(Ag1)
+        TODO: check what some_hash is
+      - idx := 0
+      - scriptSig := sign(simplified_version_of(Ag1), Ak1_priv) + Ak1_pub
+        TODO: check what simplified_version_of is
+        TODO: make sure it's actually a concatenation of pubkey + signature
+    - txout1 (to Bob):
+      - value := 23 BTC
+      - scriptPubKey := OP_DUP + OP_HASH160 + some_hash(Bk1_pub) + 
+                        OP_EQUALVERIFY + OP_CHECKSIG
+        TODO: check what some_hash is
+        TODO: check how Alice can extract Bk1_pub from Ba1
+    - txout2 (to Alice):
+      - value := 27 BTC
+      - scriptPubKey := OP_DUP + OP_HASH160 + some_hash(Ak2_pub) +
+                        OP_EQUALVERIFY + OP_CHECKSIG
+        TODO: check what some_hash is, as in txout1
+  Relay nodes verify At1:
+    - TODO
+  Miners decide whether to include At1:
+    - TODO
+  Some miner includes At1 in a block BLK#1.
+  Bob retrieves BLK#1 from the network, and verifies whether it is valid
+    - TODO
+    - in particular, Bob verifies that At1 is valid (TODO too)
+
+# vim: set expandtab ts=2 sw=2:
+
